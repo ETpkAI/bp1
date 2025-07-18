@@ -1,5 +1,6 @@
 {
   "name": "VitalLog: Blood Pressure & Heart Rate Tracker",
   "description": "A web application to log, track, and manage blood pressure and heart rate readings. Users can add new entries, view their history, and import/export data via CSV.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "prompt": ""
 }

@@ -4,6 +4,7 @@ import { HealthRecord, Translations } from '../types.ts';
 import DataEntryForm from '../components/DataEntryForm.tsx';
 import RecordsTable from '../components/RecordsTable.tsx';
 import { UploadIcon, DownloadIcon } from '../components/Icons.tsx';
+import AnalysisCard from '../components/AnalysisCard.tsx';
 
 interface HomePageProps {
   records: HealthRecord[];
@@ -122,6 +123,8 @@ const HomePage: React.FC<HomePageProps> = ({ records, addRecord, importRecords, 
   return (
     <div className="space-y-6">
       <DataEntryForm addRecord={addRecord} t={t} />
+
+      <AnalysisCard records={records} t={t} />
 
       <div className="bg-white p-6 rounded-lg shadow">
         <h2 className="text-lg font-semibold text-text-primary mb-4">{t.importExport as string}</h2>

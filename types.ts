@@ -8,6 +8,13 @@ export interface HealthRecord {
   timestamp: string; // ISO 8601 string
 }
 
+export interface AnalysisResult {
+  disclaimer: string;
+  trendAnalysis: string;
+  categoryDistribution: string;
+  lifestyleSuggestions: string[];
+}
+
 export type TranslationValue = string | ((...args: any[]) => string);
 
 export interface Translations {

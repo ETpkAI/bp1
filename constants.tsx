@@ -1,3 +1,4 @@
+
 import { Translations } from './types.ts';
 
 export const USERS_STORAGE_KEY = 'vital-log-users';
@@ -45,7 +46,16 @@ export const translations: { [lang: string]: Translations } = {
     loginTitle: "Log in to your account",
     registerTitle: "Create a new account",
     loggingIn: "Logging in...",
-    registering: "Registering..."
+    registering: "Registering...",
+    aiAnalysisTitle: "AI-Powered Analysis",
+    aiAnalysisDescription: "Get an AI-generated summary of your recent records. This is not medical advice.",
+    analyzeData: "Analyze Recent Data",
+    analyzing: "Analyzing...",
+    aiDisclaimer: "Disclaimer: This analysis is AI-generated and for informational purposes only. It is not a substitute for professional medical consultation. Always consult a healthcare professional for any health concerns.",
+    analysisError: "Sorry, the analysis could not be completed. Please ensure your API key is set up and try again.",
+    trendAnalysis: "Trend Analysis",
+    categoryDistribution: "Category Distribution",
+    lifestyleSuggestions: "Lifestyle Suggestions"
   },
   zh: {
     title: "健康日志",
@@ -88,6 +98,15 @@ export const translations: { [lang: string]: Translations } = {
     loginTitle: "登录您的账户",
     registerTitle: "创建新账户",
     loggingIn: "正在登录...",
-    registering: "正在注册..."
+    registering: "正在注册...",
+    aiAnalysisTitle: "AI 智能分析",
+    aiAnalysisDescription: "获取您最近记录的 AI 生成摘要。这不是医疗建议。",
+    analyzeData: "分析最近数据",
+    analyzing: "正在分析...",
+    aiDisclaimer: "免责声明：此分析由 AI 生成，仅供参考。它不能替代专业的医疗咨询。如有任何健康问题，请务必咨询医疗保健专业人员。",
+    analysisError: "抱歉，无法完成分析。请确保您的 API 密钥已设置并重试。",
+    trendAnalysis: "趋势分析",
+    categoryDistribution: "分类分布",
+    lifestyleSuggestions: "生活方式建议"
   }
 };
