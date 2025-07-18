@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  webapp:
+    # Build the Docker image from the Dockerfile in the current directory (.)
+    build: .
+    # Name the container for easier management
+    container_name: bp-app-container
+    ports:
+      # Map port 8080 on the host (your VPS) to port 80 inside the container (where Nginx is listening)
+      - "8080:80"
+    # This policy ensures the container restarts automatically if it crashes or if the server reboots,
+    # unless you have manually stopped it.
+    restart: unless-stopped
