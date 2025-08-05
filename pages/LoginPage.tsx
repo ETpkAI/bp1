@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Translations } from '../types.ts';
 import { HeartIcon, UserIcon, LockIcon } from '../components/Icons.tsx';
+import { useToast } from '../components/ToastManager.tsx';
 
 interface LoginPageProps {
   onLogin: (username: string, password: string) => Promise<boolean>;
@@ -16,11 +17,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onRegister, t }) => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { showToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !password) {
       setError('Please enter both username and password.');
+      showToast('请输入用户名和密码', 'error');
       return;
     }
     
@@ -28,24 +31,36 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onRegister, t }) => {
     setError('');
     setSuccessMessage('');
 
-    if (isRegister) {
-      const result = await onRegister(username, password);
-      if (result.success) {
-        setSuccessMessage(t.registrationSuccess as string);
-        setIsRegister(false); // Switch to login form
-        setUsername('');
-        setPassword('');
+    try {
+      if (isRegister) {
+        const result = await onRegister(username, password);
+        if (result.success) {
+          setSuccessMessage(t.registrationSuccess as string);
+          showToast(t.registrationSuccess as string, 'success');
+          setIsRegister(false); // Switch to login form
+          setUsername('');
+          setPassword('');
+        } else {
+          setError(t.userExists as string);
+          showToast(t.userExists as string, 'error');
+        }
       } else {
-        setError(t.userExists as string);
+        const success = await onLogin(username, password);
+        if (!success) {
+          setError(t.invalidCredentials as string);
+          showToast(t.invalidCredentials as string, 'error');
+        } else {
+          showToast('登录成功！', 'success');
+        }
+        // On success, App component will switch the view
       }
-    } else {
-      const success = await onLogin(username, password);
-      if (!success) {
-        setError(t.invalidCredentials as string);
-      }
-      // On success, App component will switch the view
+    } catch (error) {
+      const errorMsg = '操作失败，请重试';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const inputClass = "w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm";

@@ -1,8 +1,10 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { HealthRecord, Translations } from '../types.ts';
 import RecordsTable from '../components/RecordsTable.tsx';
 import { TrashIcon } from '../components/Icons.tsx';
+import ConfirmDialog from '../components/ConfirmDialog.tsx';
+import { useToast } from '../components/ToastManager.tsx';
 
 interface HistoryPageProps {
   records: HealthRecord[];
@@ -13,11 +15,21 @@ interface HistoryPageProps {
 }
 
 const HistoryPage: React.FC<HistoryPageProps> = ({ records, deleteRecord, clearAllRecords, t, language }) => {
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const { showToast } = useToast();
 
   const handleClearAll = () => {
-    if (window.confirm(t.confirmClear as string)) {
+    setShowConfirmDialog(true);
+  };
+
+  const confirmClearAll = () => {
+    try {
       clearAllRecords();
+      showToast('所有记录已清除', 'success');
+    } catch (error) {
+      showToast('清除失败，请重试', 'error');
     }
+    setShowConfirmDialog(false);
   };
 
   return (
@@ -34,7 +46,18 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ records, deleteRecord, clearA
           </button>
         )}
       </div>
-      <RecordsTable records={records} deleteRecord={deleteRecord} t={t} showAll={true} language={language} />
+      <RecordsTable records={records} deleteRecord={deleteRecord} t={t} showAll={true} language={language} pageSize={20} />
+      
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        title="确认清除"
+        message={t.confirmClear as string}
+        confirmText="清除"
+        cancelText="取消"
+        onConfirm={confirmClearAll}
+        onCancel={() => setShowConfirmDialog(false)}
+        type="danger"
+      />
     </div>
   );
 };

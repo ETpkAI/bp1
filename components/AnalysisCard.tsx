@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { HealthRecord, Translations, AnalysisResult } from '../types.ts';
 import { SparklesIcon } from './Icons.tsx';
+import { getBPLevelText } from '../utils/validation.ts';
+import { useToast } from './ToastManager.tsx';
 
 // Assume process.env.API_KEY is available in the environment
 const API_KEY = process.env.API_KEY;
@@ -12,24 +14,19 @@ interface AnalysisCardProps {
   t: Translations;
 }
 
-const getBPLevelText = (systolic: number, diastolic: number): string => {
-  if (systolic < 120 && diastolic < 80) return 'Normal';
-  if (systolic >= 120 && systolic <= 129 && diastolic < 80) return 'Elevated';
-  if ((systolic >= 130 && systolic <= 139) || (diastolic >= 80 && diastolic <= 89)) return 'High BP (Stage 1)';
-  if (systolic >= 140 || diastolic >= 90) return 'High BP (Stage 2)';
-  if (systolic > 180 || diastolic > 120) return 'Hypertensive Crisis';
-  return 'N/A';
-};
+
 
 
 const AnalysisCard: React.FC<AnalysisCardProps> = ({ records, t }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const handleAnalyze = async () => {
     if (!API_KEY) {
       setError("API Key is not configured.");
+      showToast("API Key 未配置", 'error');
       return;
     }
 
@@ -48,7 +45,9 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ records, t }) => {
       }));
 
       if (recentRecords.length < 3) {
-        setError("Not enough data for a meaningful analysis. Please add at least 3 records.");
+        const errorMsg = "Not enough data for a meaningful analysis. Please add at least 3 records.";
+        setError(errorMsg);
+        showToast(errorMsg, 'warning');
         setIsLoading(false);
         return;
       }
@@ -100,7 +99,9 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ records, t }) => {
 
     } catch (err) {
       console.error("AI Analysis Error:", err);
-      setError(t.analysisError as string);
+      const errorMsg = t.analysisError as string;
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setIsLoading(false);
     }

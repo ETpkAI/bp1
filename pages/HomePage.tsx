@@ -5,12 +5,14 @@ import DataEntryForm from '../components/DataEntryForm.tsx';
 import RecordsTable from '../components/RecordsTable.tsx';
 import { UploadIcon, DownloadIcon } from '../components/Icons.tsx';
 import AnalysisCard from '../components/AnalysisCard.tsx';
+import { useToast } from '../components/ToastManager.tsx';
 
 interface HomePageProps {
   records: HealthRecord[];
   addRecord: (record: Omit<HealthRecord, 'id' | 'timestamp'>) => void;
   importRecords: (newRecords: HealthRecord[]) => { importedCount: number; duplicateCount: number };
   deleteRecord: (id: string) => void;
+  exportRecords: (format: 'csv' | 'json') => Promise<void>;
   t: Translations;
   language: 'en' | 'zh';
 }
@@ -54,24 +56,16 @@ const parseCSV = (text: string): { headers: string[], data: any[] } => {
 };
 
 
-const HomePage: React.FC<HomePageProps> = ({ records, addRecord, importRecords, deleteRecord, t, language }) => {
+const HomePage: React.FC<HomePageProps> = ({ records, addRecord, importRecords, deleteRecord, exportRecords, t, language }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
 
-  const handleExport = () => {
-    const headers = "id,systolic,diastolic,heartRate,notes,timestamp\n";
-    const csvContent = records
-      .map(r => `${r.id},${r.systolic},${r.diastolic},${r.heartRate},"${(r.notes || '').replace(/"/g, '""')}",${r.timestamp}`)
-      .join("\n");
-
-    const blob = new Blob([headers + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `vital-log-export-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExport = async (format: 'csv' | 'json' = 'csv') => {
+    try {
+      await exportRecords(format);
+    } catch (error) {
+      showToast('导出失败，请重试', 'error');
+    }
   };
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,7 +81,7 @@ const HomePage: React.FC<HomePageProps> = ({ records, addRecord, importRecords, 
         // Basic validation
         const requiredHeaders = ['systolic', 'diastolic', 'heartRate', 'timestamp'];
         if (!requiredHeaders.every(h => headers.includes(h))) {
-            alert(t.importError as string);
+            showToast(t.importError as string, 'error');
             return;
         }
 
@@ -105,11 +99,17 @@ const HomePage: React.FC<HomePageProps> = ({ records, addRecord, importRecords, 
         const { importedCount, duplicateCount } = importRecords(newRecords);
         const importSuccessMsg = (t.importSuccess as (count: number) => string)(importedCount);
         const importDuplicatesMsg = (t.importDuplicates as (count: number) => string)(duplicateCount);
-        alert(`${importSuccessMsg}\n${importDuplicatesMsg}`);
+        
+        if (importedCount > 0) {
+          showToast(importSuccessMsg, 'success');
+        }
+        if (duplicateCount > 0) {
+          showToast(importDuplicatesMsg, 'warning');
+        }
 
       } catch (error) {
         console.error("Error importing CSV:", error);
-        alert(t.importError as string);
+        showToast(t.importError as string, 'error');
       } finally {
         // Reset file input
         if(fileInputRef.current) {
@@ -135,7 +135,7 @@ const HomePage: React.FC<HomePageProps> = ({ records, addRecord, importRecords, 
            </button>
            <input type="file" ref={fileInputRef} onChange={handleImport} accept=".csv" className="hidden" />
 
-           <button onClick={handleExport} disabled={records.length === 0} className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-text-primary bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-colors">
+           <button onClick={() => handleExport('csv')} disabled={records.length === 0} className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-text-primary bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary transition-colors">
              <DownloadIcon className="h-5 w-5 mr-2 text-text-secondary" />
              {t.exportCSV as string}
            </button>
