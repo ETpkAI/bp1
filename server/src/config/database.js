@@ -84,6 +84,14 @@ const initDatabase = async () => {
       )
     `);
 
+    // 应用配置表（存储站点 URL、端口、AI 密钥等）
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS app_config (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    `);
+
     // 创建索引
     await db.query(`
       CREATE INDEX IF NOT EXISTS idx_health_records_user_id ON health_records(user_id);

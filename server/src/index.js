@@ -8,6 +8,7 @@ const authRoutes = require('./routes/auth');
 const recordsRoutes = require('./routes/records');
 const usersRoutes = require('./routes/users');
 const aiRoutes = require('./routes/ai');
+const configRoutes = require('./routes/config');
 const { errorHandler } = require('./middleware/errorHandler');
 const { authenticateToken } = require('./middleware/auth');
 const { initDatabase } = require('./config/database');
@@ -61,6 +62,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/records', authenticateToken, recordsRoutes);
 app.use('/api/v1/users', authenticateToken, usersRoutes);
 app.use('/api/v1/ai', authenticateToken, aiRoutes);
+app.use('/api/v1/config', authenticateToken, configRoutes);
 
 // 404 处理
 app.use('*', (req, res) => {
