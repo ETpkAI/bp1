@@ -1,6 +1,7 @@
 
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import Tesseract from 'tesseract.js';
 import { HealthRecord, Translations } from '../types.ts';
 import { validateHealthRecord } from '../utils/validation.ts';
 import { useToast } from './ToastManager.tsx';
@@ -18,6 +19,8 @@ const DataEntryForm: React.FC<DataEntryFormProps> = ({ addRecord, t }) => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isOcrLoading, setIsOcrLoading] = useState(false);
 
   const validateField = (name: string, value: string) => {
     const newErrors = { ...errors };
@@ -93,6 +96,45 @@ const DataEntryForm: React.FC<DataEntryFormProps> = ({ addRecord, t }) => {
       return `${baseClasses} border-red-300 focus:ring-red-500 focus:border-red-500`;
     }
     return `${baseClasses} border-gray-300 focus:ring-brand-primary focus:border-brand-primary`;
+  };
+
+  const handlePickImage = () => {
+    fileInputRef.current?.click();
+  };
+
+  const parseNumbersFromText = (text: string) => {
+    // 提取所有 2-3 位连续数字（心率可能 2-3 位），并返回按出现顺序的前三个
+    const matches = text.match(/\b\d{2,3}\b/g) || [];
+    return matches.slice(0, 3).map(v => parseInt(v, 10));
+  };
+
+  const handleImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsOcrLoading(true);
+    try {
+      const { data } = await Tesseract.recognize(file, 'eng');
+      const raw = (data.text || '').replace(/\s+/g, ' ');
+      const nums = parseNumbersFromText(raw);
+      // 尝试赋值：一般血压计显示顺序为 SYS / DIA / PUL
+      if (nums.length >= 2) {
+        const [n1, n2, n3] = nums;
+        // 粗略判断：SYS 通常 > DIA
+        const sys = Math.max(n1, n2);
+        const dia = Math.min(n1, n2);
+        setSystolic(String(sys));
+        setDiastolic(String(dia));
+        if (n3) setHeartRate(String(n3));
+        showToast('已从图片读取数值，请确认。', 'success');
+      } else {
+        showToast('未识别到有效数值，请重试或手动输入。', 'warning');
+      }
+    } catch (err) {
+      showToast('图片识别失败，请重试。', 'error');
+    } finally {
+      setIsOcrLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -182,6 +224,13 @@ const DataEntryForm: React.FC<DataEntryFormProps> = ({ addRecord, t }) => {
               <p className="mt-1 text-sm text-red-600">{errors.heartRate}</p>
             )}
           </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelected} />
+          <button type="button" onClick={handlePickImage} disabled={isOcrLoading} className="inline-flex items-center px-3 py-2 border rounded bg-white hover:bg-gray-50 text-sm">
+            {isOcrLoading ? '识别中...' : '拍照/上传识别'}
+          </button>
+          <span className="text-xs text-gray-500">提示：对准血压计读数拍照，系统将自动识别 SYS/DIA/PUL。</span>
         </div>
         <div>
           <label htmlFor="notes" className="block text-sm font-medium text-text-secondary">{t.notes as string}</label>
