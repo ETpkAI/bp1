@@ -21,11 +21,11 @@ app.use(helmet());
 // 识别反向代理的真实 IP（用于速率限制等中间件）
 app.set('trust proxy', 1);
 
-// CORS 配置
+// CORS 配置（生产环境通过 CORS_ORIGIN 环境变量配置，逗号分隔；开发环境允许本地调试域名）
 const allowedOrigins = process.env.NODE_ENV === 'production'
   ? (process.env.CORS_ORIGIN
       ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
-      : ['http://bp.llmkc.com', 'https://bp.llmkc.com'])
+      : [])
   : ['http://localhost:5173', 'http://localhost:3000'];
 
 app.use(cors({

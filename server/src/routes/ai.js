@@ -11,6 +11,7 @@ router.post('/analyze', async (req, res) => {
       return res.status(400).json({ success: false, message: 'records 参数无效' });
     }
 
+    // 在部署环境中通过环境变量 GOOGLE_API_KEY 注入，不在仓库中保存明文密钥
     const apiKey = process.env.GOOGLE_API_KEY;
     if (!apiKey) {
       return res.status(500).json({ success: false, message: 'AI 服务未配置' });

@@ -53,6 +53,7 @@ services:
       - "80:80"
     depends_on:
       - server
+    # 可选：通过环境变量或模板化方式为 nginx.conf 注入自定义 server_name
 
 volumes:
   db_data:
