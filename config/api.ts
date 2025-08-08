@@ -2,9 +2,9 @@ import { ApiEndpoints } from '../types/api.ts';
 
 // API 基础配置
 export const API_CONFIG = {
-  // 开发环境使用本地 API，生产环境使用实际域名
+  // 生产使用同源（由 Nginx 反代 /api 到后端），避免跨域与证书问题
   BASE_URL: process.env.NODE_ENV === 'production' 
-    ? 'https://api.vitallog.com' 
+    ? '' 
     : 'http://localhost:3001',
   
   // API 版本

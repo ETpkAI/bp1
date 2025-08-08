@@ -61,6 +61,12 @@ router.post('/register', [
     const token = generateToken(user.id);
     const refreshToken = generateRefreshToken(user.id);
 
+    // 保存刷新 token（7 天过期）
+    await db.query(
+      'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
+      [user.id, refreshToken, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)]
+    );
+
     res.status(201).json({
       success: true,
       message: '注册成功',
@@ -129,6 +135,12 @@ router.post('/login', [
     // 生成 token
     const token = generateToken(user.id);
     const refreshToken = generateRefreshToken(user.id);
+
+    // 保存刷新 token（7 天过期）
+    await db.query(
+      'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
+      [user.id, refreshToken, new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)]
+    );
 
     res.json({
       success: true,

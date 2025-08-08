@@ -7,8 +7,10 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const recordsRoutes = require('./routes/records');
 const usersRoutes = require('./routes/users');
+const aiRoutes = require('./routes/ai');
 const { errorHandler } = require('./middleware/errorHandler');
 const { authenticateToken } = require('./middleware/auth');
+const { initDatabase } = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -16,11 +18,18 @@ const PORT = process.env.PORT || 3001;
 // 安全中间件
 app.use(helmet());
 
+// 识别反向代理的真实 IP（用于速率限制等中间件）
+app.set('trust proxy', 1);
+
 // CORS 配置
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? (process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+      : ['http://bp.llmkc.com', 'https://bp.llmkc.com'])
+  : ['http://localhost:5173', 'http://localhost:3000'];
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://vitallog.com', 'https://www.vitallog.com']
-    : ['http://localhost:5173', 'http://localhost:3000'],
+  origin: allowedOrigins,
   credentials: true
 }));
 
@@ -51,6 +60,7 @@ app.get('/health', (req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/records', authenticateToken, recordsRoutes);
 app.use('/api/v1/users', authenticateToken, usersRoutes);
+app.use('/api/v1/ai', authenticateToken, aiRoutes);
 
 // 404 处理
 app.use('*', (req, res) => {
@@ -63,11 +73,18 @@ app.use('*', (req, res) => {
 // 错误处理中间件
 app.use(errorHandler);
 
-// 启动服务器
-app.listen(PORT, () => {
-  console.log(`🚀 VitalLog API Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-});
+// 启动服务器并初始化数据库
+initDatabase()
+  .catch((err) => {
+    console.error('数据库初始化失败，程序退出', err);
+    process.exit(1);
+  })
+  .finally(() => {
+    app.listen(PORT, () => {
+      console.log(`🚀 VitalLog API Server running on port ${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+    });
+  });
 
 module.exports = app; 

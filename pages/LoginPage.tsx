@@ -76,6 +76,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onRegister, t }) => {
           </h2>
         </div>
         <form className="mt-8 space-y-6 bg-white p-8 rounded-xl shadow-lg" onSubmit={handleSubmit}>
+          <p className="text-sm text-text-secondary text-center">
+            {isRegister ? (t.registrationHint as string) : (t.loginHint as string)}
+          </p>
           <div className="rounded-md shadow-sm -space-y-px">
             <div className="relative">
               <UserIcon className={iconClass} />

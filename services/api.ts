@@ -11,8 +11,9 @@ import {
 } from '../types/api.ts';
 
 // API 基础配置
+// 生产同源，开发直连本地 API
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://api.vitallog.com' 
+  ? '' 
   : 'http://localhost:3001';
 
 // 获取默认请求头

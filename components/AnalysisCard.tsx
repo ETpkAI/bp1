@@ -1,13 +1,11 @@
 
 import React, { useState } from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
 import { HealthRecord, Translations, AnalysisResult } from '../types.ts';
 import { SparklesIcon } from './Icons.tsx';
 import { getBPLevelText } from '../utils/validation.ts';
 import { useToast } from './ToastManager.tsx';
 
-// Assume process.env.API_KEY is available in the environment
-const API_KEY = process.env.API_KEY;
+// 由服务器端代理 AI 调用，无需在前端保留密钥
 
 interface AnalysisCardProps {
   records: HealthRecord[];
@@ -24,18 +22,11 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ records, t }) => {
   const { showToast } = useToast();
 
   const handleAnalyze = async () => {
-    if (!API_KEY) {
-      setError("API Key is not configured.");
-      showToast("API Key 未配置", 'error');
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
     setResult(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: API_KEY });
       const recentRecords = records.slice(0, 30).map(r => ({
           systolic: r.systolic,
           diastolic: r.diastolic,
@@ -52,45 +43,25 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ records, t }) => {
         return;
       }
       
-      const schema = {
-        type: Type.OBJECT,
-        properties: {
-          trendAnalysis: {
-            type: Type.STRING,
-            description: "A brief, 1-2 sentence summary of trends in blood pressure and heart rate (e.g., stable, increasing, fluctuating).",
-          },
-          categoryDistribution: {
-              type: Type.STRING,
-              description: "A one-sentence summary of how the readings are distributed across blood pressure categories (e.g., 'Most readings are in the Normal range, with a few in Elevated.')."
-          },
-          lifestyleSuggestions: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: "A list of 3-4 general, non-prescriptive lifestyle suggestions for cardiovascular health, such as diet or exercise tips."
-          },
+      const res = await fetch('/api/v1/ai/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
-        required: ["trendAnalysis", "categoryDistribution", "lifestyleSuggestions"],
-      };
-
-      const prompt = `You are a helpful health data analyst. Analyze the following blood pressure and heart rate data from a user. The data is in JSON format, with the most recent record first. Each record includes a "category" field based on standard blood pressure classifications.
-      
-      Do not provide medical advice. Your entire response must be a valid JSON object that conforms to the provided schema. Be encouraging and focus on general wellness.
-
-      Data:
-      ${JSON.stringify(recentRecords, null, 2)}
-      `;
-
-      const response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: prompt,
-          config: {
-              responseMimeType: "application/json",
-              responseSchema: schema,
-          },
+        body: JSON.stringify({ records: recentRecords })
       });
-      
-      const responseText = response.text;
-      const parsedResult = JSON.parse(responseText) as Omit<AnalysisResult, 'disclaimer'>;
+
+      if (!res.ok) {
+        throw new Error('AI 分析请求失败');
+      }
+
+      const json = await res.json();
+      if (!json.success || !json.data) {
+        throw new Error(json.message || 'AI 分析失败');
+      }
+
+      const parsedResult = json.data as Omit<AnalysisResult, 'disclaimer'>;
 
       setResult({
           ...parsedResult,

@@ -85,51 +85,47 @@ const App: React.FC = () => {
 
   if (!isAuthenticated || !user) {
     return (
-      <ToastManager>
-        <LoginPage onLogin={handleLogin} onRegister={handleRegister} t={t} />
-      </ToastManager>
+      <LoginPage onLogin={handleLogin} onRegister={handleRegister} t={t} />
     );
   }
 
   return (
-    <ToastManager>
-      <HashRouter>
-        <div className="min-h-screen bg-gray-50 text-text-primary font-sans">
-          <Header t={t} currentUser={user.username} onLogout={handleLogout} />
-          <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  <HomePage 
-                    records={records} 
-                    addRecord={addRecord} 
-                    importRecords={importRecords} 
-                    deleteRecord={deleteRecord}
-                    exportRecords={exportRecords}
-                    t={t} 
-                    language={language} 
-                  />
-                }
-              />
-              <Route
-                path="/history"
-                element={
-                  <HistoryPage 
-                    records={records} 
-                    deleteRecord={deleteRecord} 
-                    clearAllRecords={clearAllRecords} 
-                    t={t} 
-                    language={language} 
-                  />
-                }
-              />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </main>
-        </div>
-      </HashRouter>
-    </ToastManager>
+    <HashRouter>
+      <div className="min-h-screen bg-gray-50 text-text-primary font-sans">
+        <Header t={t} currentUser={user.username} onLogout={handleLogout} />
+        <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <HomePage 
+                  records={records} 
+                  addRecord={addRecord} 
+                  importRecords={importRecords} 
+                  deleteRecord={deleteRecord}
+                  exportRecords={exportRecords}
+                  t={t} 
+                  language={language} 
+                />
+              }
+            />
+            <Route
+              path="/history"
+              element={
+                <HistoryPage 
+                  records={records} 
+                  deleteRecord={deleteRecord} 
+                  clearAllRecords={clearAllRecords} 
+                  t={t} 
+                  language={language} 
+                />
+              }
+            />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </main>
+      </div>
+    </HashRouter>
   );
 };
 

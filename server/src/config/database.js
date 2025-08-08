@@ -1,14 +1,29 @@
 const { Pool } = require('pg');
 
-// 数据库连接配置
-const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'vitallog',
-  password: process.env.DB_PASSWORD || 'password',
-  port: process.env.DB_PORT || 5432,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
+// 允许通过 DATABASE_URL 或离散变量配置数据库连接
+// 重要：不要在生产环境默认启用 SSL，除非明确设置 DB_SSL=true
+const createPool = () => {
+  const hasConnectionString = !!process.env.DATABASE_URL;
+  const shouldUseSsl = (process.env.DB_SSL || '').toLowerCase() === 'true' || (hasConnectionString && (process.env.DB_SSL || '').toLowerCase() !== 'false');
+
+  if (hasConnectionString) {
+    return new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
+    });
+  }
+
+  return new Pool({
+    user: process.env.DB_USER || 'postgres',
+    host: process.env.DB_HOST || 'localhost',
+    database: process.env.DB_NAME || 'vitallog',
+    password: process.env.DB_PASSWORD || 'password',
+    port: Number(process.env.DB_PORT || 5432),
+    ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
+  });
+};
+
+const pool = createPool();
 
 // 测试数据库连接
 pool.on('connect', () => {
@@ -25,9 +40,12 @@ const db = {
   getClient: () => pool.connect(),
 };
 
-// 初始化数据库表
+// 初始化数据库表与扩展
 const initDatabase = async () => {
   try {
+    // 确保 uuid 相关函数存在（gen_random_uuid 需要 pgcrypto）
+    await pool.query('CREATE EXTENSION IF NOT EXISTS pgcrypto');
+
     // 创建用户表
     await db.query(`
       CREATE TABLE IF NOT EXISTS users (
