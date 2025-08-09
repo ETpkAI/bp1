@@ -48,6 +48,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ records, t }) => {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
         },
         body: JSON.stringify({ records: recentRecords })
       });

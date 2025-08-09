@@ -178,16 +178,29 @@ const DataEntryForm: React.FC<DataEntryFormProps> = ({ addRecord, t }) => {
     setIsOcrLoading(true);
     try {
       const canvas = await preprocessImage(file);
-      const configStr = 'tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz:/. - --psm 6';
       // 第一次尝试：中英双语
-      let result = await Tesseract.recognize(canvas, 'eng+chi_sim', { logger: () => {}, config: configStr });
+      let result = await Tesseract.recognize(canvas, 'eng+chi_sim', {
+        logger: () => {},
+        // 更有利于数字与短行文本识别
+        tessedit_pageseg_mode: '7',
+        // 提高数字识别稳健性
+        classify_bln_numeric_mode: '1',
+        user_defined_dpi: '300',
+        tessedit_char_whitelist: '0123456789SYDIAPUL高压低压心率/:. ',
+      } as any);
       let raw = (result.data.text || '').trim();
       let { sys, dia, pul } = parseLabeledValues(raw);
 
       // 若未命中标签/分数形式，尝试仅英文再识别一次
       if (!sys || !dia) {
-        result = await Tesseract.recognize(canvas, 'eng', { logger: () => {}, config: configStr });
-        raw = (result.data.text || '').trim();
+        const { data: { text } } = await Tesseract.recognize(canvas, 'eng', {
+          logger: () => {},
+          tessedit_pageseg_mode: '7',
+          classify_bln_numeric_mode: '1',
+          user_defined_dpi: '300',
+          tessedit_char_whitelist: '0123456789/.',
+        } as any);
+        raw = (text || '').trim();
         const parsed = parseLabeledValues(raw);
         sys = sys ?? parsed.sys;
         dia = dia ?? parsed.dia;
@@ -299,7 +312,7 @@ const DataEntryForm: React.FC<DataEntryFormProps> = ({ addRecord, t }) => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelected} />
+          <input ref={fileInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageSelected} />
           <button type="button" onClick={handlePickImage} disabled={isOcrLoading} className="inline-flex items-center px-3 py-2 border rounded bg-white hover:bg-gray-50 text-sm">
             {isOcrLoading ? '识别中...' : '拍照/上传识别'}
           </button>

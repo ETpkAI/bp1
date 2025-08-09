@@ -20,11 +20,16 @@ router.get('/', async (req, res) => {
     const total = parseInt(countResult.rows[0].count);
 
     // 获取记录列表
+    // 安全白名单排序字段
+    const sortableColumns = new Set(['timestamp', 'created_at', 'updated_at', 'systolic', 'diastolic', 'heart_rate']);
+    const orderByColumn = sortableColumns.has(String(sortBy)) ? String(sortBy) : 'timestamp';
+    const orderDirection = String(sortOrder).toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
     const result = await db.query(
       `SELECT id, user_id, systolic, diastolic, heart_rate, notes, timestamp, created_at, updated_at 
        FROM health_records 
        WHERE user_id = $1 
-       ORDER BY ${sortBy} ${sortOrder.toUpperCase()} 
+       ORDER BY ${orderByColumn} ${orderDirection} 
        LIMIT $2 OFFSET $3`,
       [userId, limit, offset]
     );

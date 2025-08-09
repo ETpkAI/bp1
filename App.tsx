@@ -7,7 +7,6 @@ import HomePage from './pages/HomePage.tsx';
 import HistoryPage from './pages/HistoryPage.tsx';
 import Header from './components/Header.tsx';
 import LoginPage from './pages/LoginPage.tsx';
-import SetupPage from './pages/SetupPage.tsx';
 import { ToastManager } from './components/ToastManager.tsx';
 import { useCloudHealthData } from './hooks/useCloudHealthData.ts';
 import { useAuth } from './hooks/useAuth.ts';
@@ -86,11 +85,8 @@ const App: React.FC = () => {
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="p-4 space-y-4">
+      <div className="p-4">
         <LoginPage onLogin={handleLogin} onRegister={handleRegister} t={t} />
-        <div className="max-w-3xl mx-auto">
-          <SetupPage />
-        </div>
       </div>
     );
   }

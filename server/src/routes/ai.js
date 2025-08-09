@@ -17,17 +17,17 @@ router.post('/analyze', async (req, res) => {
       return res.status(500).json({ success: false, message: 'AI 服务未配置' });
     }
 
-    const genai = await import('@google/genai');
-    const { GoogleGenAI, Type } = genai;
+    // 动态导入官方 SDK（ESM）
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(apiKey);
 
-    const ai = new GoogleGenAI({ apiKey });
-
+    // 使用 JSON Schema 约束返回结构
     const schema = {
-      type: Type.OBJECT,
+      type: 'object',
       properties: {
-        trendAnalysis: { type: Type.STRING },
-        categoryDistribution: { type: Type.STRING },
-        lifestyleSuggestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+        trendAnalysis: { type: 'string' },
+        categoryDistribution: { type: 'string' },
+        lifestyleSuggestions: { type: 'array', items: { type: 'string' } },
       },
       required: ['trendAnalysis', 'categoryDistribution', 'lifestyleSuggestions']
     };
@@ -37,16 +37,16 @@ router.post('/analyze', async (req, res) => {
     const prompt = `你是一名健康数据分析助手。请用简体中文分析以下用户的血压与心率数据（JSON，最新在前）。请勿提供医疗建议，仅给出一般性的健康建议。你的整个回复必须是严格的 JSON，符合给定的 schema。
 \n数据：\n${JSON.stringify(recent, null, 2)}\n`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: schema,
       },
     });
 
-    const text = response.text;
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
     let parsed;
     try {
       parsed = JSON.parse(text);

@@ -8,7 +8,6 @@ VitalLog 是一个简洁易用的血压与心率追踪应用，支持云端账�
 - OCR 自动录入：拍照或上传血压计读数图片，自动识别并填入 SYS/DIA/PUL（基于 tesseract.js）
 - AI 智能分析：调用 Gemini 生成中文分析摘要（通过后端安全代理调用，前端不暴露密钥）
 - 用户资料：查看 / 更新邮箱
-- 首次运行配置：在未登录时提供配置页面（域名、端口、CORS 等非敏感项），提示将敏感项在服务器 .env 设置
 - 生产部署：基于 Docker Compose（db/server/web），Nginx 同源反代 `/api`
 
 ## 架构与技术栈
@@ -71,7 +70,7 @@ bash scripts/install_vps.sh
 - 记录：`GET/POST/DELETE /api/v1/records`，`GET /api/v1/records/export`
 - 用户：`GET/PUT /api/v1/users/profile`
 - AI 分析（中文 JSON）：`POST /api/v1/ai/analyze`
-- 首次配置：`GET/POST /api/v1/config`（非敏感）；`POST /api/v1/config/secret`（仅占位，建议在 .env 设置密钥）
+  
 
 ## 数据持久化
 - Postgres 数据通过命名卷 `bp_db_data` 持久化；重启/重建容器不会影响数据。
@@ -85,3 +84,4 @@ bash scripts/install_vps.sh
 ## 版本
 - 1.0.0：生产部署改造、后端 AI 安全代理、刷新令牌持久化、一键安装脚本
 - 1.1.0：新增 OCR 自动录入、首次运行配置页、README 重写
+- 1.2.0：删除首次运行配置页；AI 分析请求补充鉴权；后端切换 `@google/generative-ai` 官方 SDK 并修正调用；OCR 参数优化（后摄直拍、PSM、DPI、数字模式）；记录排序字段白名单以提升安全性；前端移除无用的 AI 密钥暴露
