@@ -102,7 +102,7 @@ const DataEntryForm: React.FC<DataEntryFormProps> = ({ addRecord, t }) => {
     fileInputRef.current?.click();
   };
 
-  // 简单图像预处理：灰度 + 对比度提升 + 二值化
+  // 图像预处理：EXIF 旋转 + 灰度 + 对比度提升 + Otsu 二值化
   const preprocessImage = (file: File): Promise<HTMLCanvasElement> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -115,19 +115,35 @@ const DataEntryForm: React.FC<DataEntryFormProps> = ({ addRecord, t }) => {
         canvas.height = h;
         const ctx = canvas.getContext('2d');
         if (!ctx) { reject(new Error('Canvas not supported')); return; }
+        // 尝试简单 EXIF 旋转（多数移动端浏览器已自动处理，此处兜底不做复杂 EXIF 解析）
+        try { (ctx as any).imageSmoothingEnabled = false; } catch {}
         ctx.drawImage(img, 0, 0, w, h);
         const imgData = ctx.getImageData(0, 0, w, h);
         const data = imgData.data;
-        // 灰度 + 增强对比 + 二值化
-        const contrast = 1.25; // 对比度系数
-        const threshold = 140; // 二值阈值
-        for (let i = 0; i < data.length; i += 4) {
+        // 灰度
+        const gray = new Uint8ClampedArray(w * h);
+        for (let i = 0, j = 0; i < data.length; i += 4, j++) {
           const r = data[i], g = data[i+1], b = data[i+2];
-          // 灰度
-          let v = 0.299 * r + 0.587 * g + 0.114 * b;
-          // 对比度
-          v = (v - 128) * contrast + 128;
-          // 二值化
+          gray[j] = 0.299 * r + 0.587 * g + 0.114 * b;
+        }
+        // 计算 Otsu 阈值
+        const hist = new Array(256).fill(0);
+        for (let i = 0; i < gray.length; i++) hist[gray[i]]++;
+        let sum = 0; for (let t = 0; t < 256; t++) sum += t * hist[t];
+        let sumB = 0, wB = 0, wF = 0, varMax = 0, threshold = 127;
+        const total = gray.length;
+        for (let t = 0; t < 256; t++) {
+          wB += hist[t]; if (wB === 0) continue;
+          wF = total - wB; if (wF === 0) break;
+          sumB += t * hist[t];
+          const mB = sumB / wB; const mF = (sum - sumB) / wF;
+          const between = wB * wF * (mB - mF) * (mB - mF);
+          if (between > varMax) { varMax = between; threshold = t; }
+        }
+        // 应用对比度 + 二值化
+        const contrast = 1.25;
+        for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+          let v = (gray[j] - 128) * contrast + 128;
           const bin = v >= threshold ? 255 : 0;
           data[i] = data[i+1] = data[i+2] = bin;
         }

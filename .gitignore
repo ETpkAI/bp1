@@ -1,5 +1,7 @@
 # Dependencies (for potential future use)
 /node_modules
+server/node_modules
+server/package-lock.json
 
 # Build artifacts
 /build

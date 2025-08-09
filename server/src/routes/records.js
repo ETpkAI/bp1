@@ -123,6 +123,88 @@ router.post('/', [
   }
 });
 
+// 更新健康记录
+router.put('/:id', [
+  body('systolic').optional().isInt({ min: 70, max: 300 }),
+  body('diastolic').optional().isInt({ min: 40, max: 200 }),
+  body('heartRate').optional().isInt({ min: 30, max: 250 }),
+  body('notes').optional().isLength({ max: 500 }),
+  body('timestamp').optional().isISO8601()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(422).json({
+        success: false,
+        message: '输入验证失败',
+        errors: errors.array()
+      });
+    }
+
+    const { id } = req.params;
+    const userId = req.user.id;
+    const { systolic, diastolic, heartRate, notes, timestamp } = req.body || {};
+
+    // 至少一个字段需要更新
+    if (
+      typeof systolic === 'undefined' &&
+      typeof diastolic === 'undefined' &&
+      typeof heartRate === 'undefined' &&
+      typeof notes === 'undefined' &&
+      typeof timestamp === 'undefined'
+    ) {
+      return res.status(400).json({ success: false, message: '没有可更新的字段' });
+    }
+
+    // 构建动态更新语句
+    const fields = [];
+    const values = [];
+    let idx = 1;
+    if (typeof systolic !== 'undefined') { fields.push(`systolic = $${idx++}`); values.push(systolic); }
+    if (typeof diastolic !== 'undefined') { fields.push(`diastolic = $${idx++}`); values.push(diastolic); }
+    if (typeof heartRate !== 'undefined') { fields.push(`heart_rate = $${idx++}`); values.push(heartRate); }
+    if (typeof notes !== 'undefined') { fields.push(`notes = $${idx++}`); values.push(notes); }
+    if (typeof timestamp !== 'undefined') { fields.push(`timestamp = $${idx++}`); values.push(timestamp); }
+    fields.push(`updated_at = NOW()`);
+
+    // WHERE 子句参数
+    values.push(id); // $idx
+    values.push(userId); // $idx+1
+
+    const result = await db.query(
+      `UPDATE health_records
+       SET ${fields.join(', ')}
+       WHERE id = $${idx++} AND user_id = $${idx}
+       RETURNING id, user_id, systolic, diastolic, heart_rate, notes, timestamp, created_at, updated_at`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: '记录不存在' });
+    }
+
+    const record = result.rows[0];
+    res.json({
+      success: true,
+      message: '记录更新成功',
+      data: {
+        id: record.id,
+        userId: record.user_id,
+        systolic: record.systolic,
+        diastolic: record.diastolic,
+        heartRate: record.heart_rate,
+        notes: record.notes,
+        timestamp: record.timestamp,
+        createdAt: record.created_at,
+        updatedAt: record.updated_at
+      }
+    });
+  } catch (error) {
+    console.error('更新记录错误:', error);
+    res.status(500).json({ success: false, message: '服务器内部错误' });
+  }
+});
+
 // 删除健康记录
 router.delete('/:id', async (req, res) => {
   try {

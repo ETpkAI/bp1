@@ -31,9 +31,33 @@ const getHeaders = () => {
   return headers;
 };
 
-// 处理 API 响应
-const handleResponse = async <T>(response: Response): Promise<T> => {
+// 处理 API 响应，401 时尝试刷新后重放一次
+const handleResponse = async <T>(response: Response, retry?: () => Promise<Response>): Promise<T> => {
   if (!response.ok) {
+    // 401 自动刷新并重试一次
+    if (response.status === 401 && retry) {
+      try {
+        const rt = localStorage.getItem('refresh_token');
+        if (rt) {
+          const refreshRes = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ refreshToken: rt })
+          });
+          if (refreshRes.ok) {
+            const json = await refreshRes.json();
+            if (json?.success && json?.data?.token) {
+              localStorage.setItem('auth_token', json.data.token);
+              if (json.data.refreshToken) localStorage.setItem('refresh_token', json.data.refreshToken);
+              const replay = await retry();
+              if (replay.ok) {
+                return replay.json();
+              }
+            }
+          }
+        }
+      } catch {}
+    }
     const error = await response.json().catch(() => ({ message: '请求失败' }));
     throw new Error(error.message || `HTTP ${response.status}`);
   }
@@ -130,41 +154,41 @@ export class ApiClient {
 
     const url = `${API_BASE_URL}/api/v1/records${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     
-    const response = await fetch(url, {
+    const doFetch = () => fetch(url, {
       method: 'GET',
       headers: getHeaders(),
     });
-
-    return handleResponse<ApiResponse<PaginatedResponse<HealthRecord>>>(response);
+    const response = await doFetch();
+    return handleResponse<ApiResponse<PaginatedResponse<HealthRecord>>>(response, doFetch);
   }
 
   static async createRecord(record: CreateHealthRecord): Promise<ApiResponse<HealthRecord>> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/records`, {
+    const doFetch = () => fetch(`${API_BASE_URL}/api/v1/records`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(record),
     });
-
-    return handleResponse<ApiResponse<HealthRecord>>(response);
+    const response = await doFetch();
+    return handleResponse<ApiResponse<HealthRecord>>(response, doFetch);
   }
 
   static async updateRecord(id: string, updates: UpdateHealthRecord): Promise<ApiResponse<HealthRecord>> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/records/${id}`, {
+    const doFetch = () => fetch(`${API_BASE_URL}/api/v1/records/${id}`, {
       method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify(updates),
     });
-
-    return handleResponse<ApiResponse<HealthRecord>>(response);
+    const response = await doFetch();
+    return handleResponse<ApiResponse<HealthRecord>>(response, doFetch);
   }
 
   static async deleteRecord(id: string): Promise<ApiResponse<void>> {
-    const response = await fetch(`${API_BASE_URL}/api/v1/records/${id}`, {
+    const doFetch = () => fetch(`${API_BASE_URL}/api/v1/records/${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
     });
-
-    return handleResponse<ApiResponse<void>>(response);
+    const response = await doFetch();
+    return handleResponse<ApiResponse<void>>(response, doFetch);
   }
 
   static async exportRecords(format: 'csv' | 'json' = 'csv'): Promise<Blob> {
@@ -178,6 +202,17 @@ export class ApiClient {
     }
 
     return response.blob();
+  }
+
+  // AI 分析
+  static async analyze(records: Array<{systolic:number; diastolic:number; heartRate:number; timestamp:string; category?: string;}>): Promise<ApiResponse<any>> {
+    const doFetch = () => fetch(`${API_BASE_URL}/api/v1/ai/analyze`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ records })
+    });
+    const response = await doFetch();
+    return handleResponse<ApiResponse<any>>(response, doFetch);
   }
 }
 

@@ -4,6 +4,7 @@ import { HealthRecord, Translations, AnalysisResult } from '../types.ts';
 import { SparklesIcon } from './Icons.tsx';
 import { getBPLevelText } from '../utils/validation.ts';
 import { useToast } from './ToastManager.tsx';
+import ApiClient from '../services/api.ts';
 
 // 由服务器端代理 AI 调用，无需在前端保留密钥
 
@@ -43,21 +44,7 @@ const AnalysisCard: React.FC<AnalysisCardProps> = ({ records, t }) => {
         return;
       }
       
-      const res = await fetch('/api/v1/ai/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token') || ''}`,
-        },
-        body: JSON.stringify({ records: recentRecords })
-      });
-
-      if (!res.ok) {
-        throw new Error('AI 分析请求失败');
-      }
-
-      const json = await res.json();
+      const json = await ApiClient.analyze(recentRecords);
       if (!json.success || !json.data) {
         throw new Error(json.message || 'AI 分析失败');
       }
