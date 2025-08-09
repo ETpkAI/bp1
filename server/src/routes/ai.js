@@ -45,13 +45,23 @@ router.post('/analyze', async (req, res) => {
       },
     });
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    // 调用与健壮性：先尝试一次，如果不是 JSON，再尝试一次纠偏
+    const callOnce = async (p) => {
+      const r = await model.generateContent(p);
+      return r.response.text();
+    };
+    let text = await callOnce(prompt);
     let parsed;
     try {
       parsed = JSON.parse(text);
     } catch (e) {
-      return res.status(502).json({ success: false, message: 'AI 响应解析失败' });
+      const fixPrompt = `${text}\n\n上述不是严格 JSON。请仅输出符合以下 JSON Schema 的 JSON：${JSON.stringify(schema)}`;
+      text = await callOnce(fixPrompt);
+      try {
+        parsed = JSON.parse(text);
+      } catch (e2) {
+        return res.status(502).json({ success: false, message: 'AI 响应解析失败' });
+      }
     }
 
     return res.json({ success: true, data: parsed });

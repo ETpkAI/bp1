@@ -8,10 +8,9 @@ const authRoutes = require('./routes/auth');
 const recordsRoutes = require('./routes/records');
 const usersRoutes = require('./routes/users');
 const aiRoutes = require('./routes/ai');
-const configRoutes = require('./routes/config');
 const { errorHandler } = require('./middleware/errorHandler');
 const { authenticateToken } = require('./middleware/auth');
-const { initDatabase } = require('./config/database');
+const { initDatabase, db } = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -34,7 +33,7 @@ app.use(cors({
   credentials: true
 }));
 
-// 速率限制
+// 全局速率限制
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15分钟
   max: 100, // 限制每个IP 15分钟内最多100个请求
@@ -44,6 +43,13 @@ const limiter = rateLimit({
   }
 });
 app.use('/api/', limiter);
+
+// AI 接口单独限流（更严格）
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { success: false, message: 'AI 请求过于频繁，请稍后再试' }
+});
 
 // 解析 JSON
 app.use(express.json({ limit: '10mb' }));
@@ -61,8 +67,7 @@ app.get('/health', (req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/records', authenticateToken, recordsRoutes);
 app.use('/api/v1/users', authenticateToken, usersRoutes);
-app.use('/api/v1/ai', authenticateToken, aiRoutes);
-app.use('/api/v1/config', authenticateToken, configRoutes);
+app.use('/api/v1/ai', authenticateToken, aiLimiter, aiRoutes);
 
 // 404 处理
 app.use('*', (req, res) => {
@@ -87,6 +92,15 @@ initDatabase()
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/health`);
     });
+
+    // 定期清理过期刷新令牌（每小时）
+    setInterval(async () => {
+      try {
+        await db.query('DELETE FROM refresh_tokens WHERE expires_at <= NOW()');
+      } catch (e) {
+        console.error('清理过期刷新令牌失败:', e);
+      }
+    }, 60 * 60 * 1000);
   });
 
 module.exports = app; 
